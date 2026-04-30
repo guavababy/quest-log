@@ -1,16 +1,573 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QUEST LOG</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Quest Log">
+    <title>Quest Log</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --bg:        #86BCD5;
+            --surface:   #C2E0ED;
+            --card:      #C2E0ED;
+            --border:    #86BCD5;
+            --px:        #232C41;
+            --gold:      #F2B705;
+            --gold-dark: #B8860B;
+            --text:      #E8F8FF;
+            --muted:     #4A7FA5;
+            --easy:      #56CC56;
+            --medium:    #5BC8F5;
+            --hard:      #FF8C42;
+            --epic:      #FF3355;
+            --danger:    #FF3355;
+            --radius:    0px;
+            --radius-sm: 0px;
+            --safe-top:    env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; background: var(--bg); }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); position: fixed; width: 100%; height: 100%; }
+        #app { display: flex; flex-direction: column; height: 100%; padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+        .header { background: var(--surface); border-bottom: 3px solid var(--px); padding: 12px 14px 10px; flex-shrink: 0; }
+        .char-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .char-avatar { width: 44px; height: 44px; background: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; border: 3px solid var(--px); box-shadow: 3px 3px 0 var(--px); }
+        .char-info { flex: 1; min-width: 0; }
+        .char-name { font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--gold); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .char-class { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--muted); }
+        .level-badge { display: inline-block; background: var(--gold); color: #232C41; font-family: 'Press Start 2P', monospace; font-size: 8px; padding: 5px 9px; border: 2px solid var(--px); box-shadow: 2px 2px 0 var(--px); }
+        .xp-hint { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--muted); margin-top: 4px; text-align: right; }
+        .xp-track { height: 14px; background: var(--px); border: 2px solid var(--px); overflow: hidden; position: relative; }
+        .xp-fill { height: 100%; background: var(--gold); transition: width .4s steps(16); }
+        .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px 88px; }
+        .content::-webkit-scrollbar { width: 0; }
+        .tab-bar { display: flex; background: var(--surface); border-top: 3px solid var(--px); flex-shrink: 0; }
+        .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 4px; background: none; border: none; color: var(--muted); gap: 4px; cursor: pointer; font-family: 'Press Start 2P', monospace; font-size: 5px; border-right: 1px solid var(--border); }
+        .tab-btn:last-child { border-right: none; }
+        .tab-btn .ti { font-size: 18px; line-height: 1; }
+        .tab-btn.active { color: #F2B705; background: rgba(242,183,5,.06); }
+        .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .sec-title { font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--muted); }
+        .sec-badge { background: var(--surface); color: var(--muted); font-family: 'Press Start 2P', monospace; font-size: 7px; padding: 3px 7px; border: 1px solid var(--border); }
+        .qcard { background: var(--card); border: 2px solid var(--px); box-shadow: 4px 4px 0 var(--px); padding: 11px 11px 11px 15px; margin-bottom: 14px; position: relative; overflow: hidden; transition: transform .08s, box-shadow .08s; }
+        .qcard:active { transform: translate(4px,4px); box-shadow: 0 0 0 var(--px); }
+        .qcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+        .qcard.easy::before   { background: var(--easy); }
+        .qcard.medium::before { background: var(--medium); }
+        .qcard.hard::before   { background: var(--hard); }
+        .qcard.epic::before   { background: var(--epic); }
+        .qcard.completed { opacity: .5; box-shadow: 2px 2px 0 var(--px); }
+        .qcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+        .qtitle { font-size: 14px; font-weight: 600; flex: 1; line-height: 1.35; }
+        .qcard.completed .qtitle { text-decoration: line-through; }
+        .dbadge { font-family: 'Press Start 2P', monospace; font-size: 6px; padding: 4px 6px; flex-shrink: 0; border: 1.5px solid; }
+        .dbadge.easy   { border-color: var(--easy);   color: var(--easy);   background: rgba(86,204,86,.1); }
+        .dbadge.medium { border-color: var(--medium); color: var(--medium); background: rgba(91,200,245,.1); }
+        .dbadge.hard   { border-color: var(--hard);   color: var(--hard);   background: rgba(255,140,66,.1); }
+        .dbadge.epic   { border-color: var(--epic);   color: var(--epic);   background: rgba(255,51,85,.1); }
+        .qmeta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
+        .qmeta-item { font-size: 11px; color: var(--muted); }
+        .qmeta-item.overdue { color: var(--danger); }
+        .qmeta-item.soon    { color: var(--hard); }
+        .xpreward { font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--gold); margin-left: auto; }
+        .qdesc { font-size: 12px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
+        .qactions { display: flex; gap: 8px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 10px 14px; border: 2px solid var(--px); box-shadow: 3px 3px 0 var(--px); cursor: pointer; transition: transform .08s, box-shadow .08s; font-family: 'Press Start 2P', monospace; font-size: 7px; }
+        .btn:active { transform: translate(3px,3px); box-shadow: 0 0 0 var(--px); }
+        .btn-gold   { background: var(--gold); color: #232C41; flex: 1; }
+        .btn-ghost  { background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: 3px 3px 0 var(--border); }
+        .btn-danger { background: rgba(255,51,85,.12); color: var(--danger); border-color: var(--danger); box-shadow: 3px 3px 0 var(--danger); padding: 10px 11px; }
+        .btn-full   { width: 100%; padding: 14px; font-size: 7px; }
+        .fab { position: fixed; bottom: calc(60px + var(--safe-bottom) + 16px); right: 16px; width: 52px; height: 52px; background: var(--gold); color: #232C41; font-size: 28px; border: 3px solid var(--px); box-shadow: 4px 4px 0 var(--px); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; transition: transform .08s, box-shadow .08s; }
+        .fab:active { transform: translate(4px,4px); box-shadow: 0 0 0 var(--px); }
+        .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.82); z-index: 200; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+        .sheet-overlay.open { opacity: 1; pointer-events: all; }
+        .sheet { background: var(--surface); border-top: 3px solid var(--px); border-left: 3px solid var(--px); border-right: 3px solid var(--px); width: 100%; padding: 16px 16px calc(16px + var(--safe-bottom)); transform: translateY(100%); transition: transform .28s cubic-bezier(.34,1.56,.64,1); max-height: 92vh; overflow-y: auto; }
+        .sheet-overlay.open .sheet { transform: translateY(0); }
+        .sheet-handle { width: 36px; height: 4px; background: var(--border); margin: 0 auto 16px; }
+        .sheet-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--gold); margin-bottom: 20px; text-align: center; }
+        .fgroup { margin-bottom: 16px; }
+        .flabel { display: block; font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--muted); margin-bottom: 8px; }
+        .finput, .ftextarea { width: 100%; background: var(--card); border: 2px solid var(--border); padding: 11px; color: var(--text); font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; outline: none; -webkit-appearance: none; appearance: none; transition: border-color .15s; }
+        .finput:focus, .ftextarea:focus { border-color: var(--gold); }
+        .finput.error { border-color: var(--danger); }
+        .ftextarea { resize: none; height: 76px; }
+        .diff-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .diff-opt { display: flex; flex-direction: column; align-items: center; padding: 10px 4px; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--px); cursor: pointer; background: var(--card); transition: transform .08s, box-shadow .08s; }
+        .diff-opt:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--px); }
+        .diff-opt .di { font-size: 18px; margin-bottom: 5px; }
+        .diff-opt .dn { font-family: 'Press Start 2P', monospace; font-size: 6px; }
+        .diff-opt .dx { font-family: 'Press Start 2P', monospace; font-size: 5px; color: var(--muted); margin-top: 2px; }
+        .diff-opt.easy   .dn { color: var(--easy); }
+        .diff-opt.medium .dn { color: var(--medium); }
+        .diff-opt.hard   .dn { color: var(--hard); }
+        .diff-opt.epic   .dn { color: var(--epic); }
+        .diff-opt.sel.easy   { border-color: var(--easy);   background: rgba(86,204,86,.12); }
+        .diff-opt.sel.medium { border-color: var(--medium); background: rgba(91,200,245,.12); }
+        .diff-opt.sel.hard   { border-color: var(--hard);   background: rgba(255,140,66,.12); }
+        .diff-opt.sel.epic   { border-color: var(--epic);   background: rgba(255,51,85,.12); }
+        .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .cat-opt { display: flex; flex-direction: column; align-items: center; padding: 10px 4px; border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--px); cursor: pointer; background: var(--card); font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--muted); gap: 5px; transition: transform .08s, box-shadow .08s; }
+        .cat-opt:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--px); }
+        .cat-opt .ci { font-size: 20px; }
+        .cat-opt.sel { border-color: var(--gold); background: rgba(242,183,5,.1); color: var(--gold); }
+        .lu-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 300; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+        .lu-overlay.open { opacity: 1; pointer-events: all; }
+        .lu-card { background: var(--surface); border: 4px solid var(--gold); box-shadow: 6px 6px 0 var(--gold); padding: 28px 20px; text-align: center; max-width: 280px; width: 88%; transform: scale(.8); transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+        .lu-overlay.open .lu-card { transform: scale(1); }
+        .lu-emoji { font-size: 44px; margin-bottom: 10px; }
+        .lu-tag   { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold); margin-bottom: 8px; }
+        .lu-num   { font-family: 'Press Start 2P', monospace; font-size: 52px; color: var(--gold); line-height: 1; margin-bottom: 8px; }
+        .lu-class { font-family: 'Press Start 2P', monospace; font-size: 9px; margin-bottom: 24px; line-height: 1.8; }
+        .empty { text-align: center; padding: 52px 20px; color: var(--muted); }
+        .empty-icon { font-size: 56px; margin-bottom: 16px; }
+        .empty h3 { font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--text); margin-bottom: 12px; line-height: 1.8; }
+        .empty p  { font-size: 12px; line-height: 1.6; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+        .stat-card { background: var(--card); border: 2px solid var(--px); box-shadow: 3px 3px 0 var(--px); padding: 14px; text-align: center; }
+        .stat-val { font-family: 'Press Start 2P', monospace; font-size: 18px; color: var(--gold); }
+        .stat-lbl { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--muted); margin-top: 8px; }
+        .setup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 32px 24px; text-align: center; }
+        .setup .finput { color: #F2B705; }
+        .setup-logo  { font-size: 72px; margin-bottom: 16px; }
+        .setup-h1    { font-family: 'Press Start 2P', monospace; font-size: 15px; color: var(--gold); margin-bottom: 12px; line-height: 1.8; }
+        .setup-sub   { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 36px; }
+        .setup-label { font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--muted); margin-bottom: 8px; align-self: flex-start; width: 100%; }
+        @keyframes xpFloat { 0% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-70px); } }
+        .xp-float { position: fixed; font-family: 'Press Start 2P', monospace; font-size: 13px; color: var(--gold); text-shadow: 2px 2px 0 #232C41; pointer-events: none; z-index: 500; animation: xpFloat 1.4s ease-out forwards; }
+        .filter-bar { background: var(--surface); border-bottom: 3px solid var(--px); padding: 9px 14px 11px; flex-shrink: 0; }
+        .filter-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: none; border: none; color: var(--muted); font-family: 'Press Start 2P', monospace; font-size: 7px; width: 100%; padding: 0; }
+        .filter-toggle .ft-right { display: flex; align-items: center; gap: 6px; }
+        .filter-dot { width: 8px; height: 8px; background: var(--gold); display: none; }
+        .filter-dot.visible { display: block; }
+        .filter-chevron { font-size: 10px; transition: transform .2s; }
+        .filter-chevron.open { transform: rotate(180deg); }
+        .filter-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .filter-row-label { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--muted); margin-bottom: 6px; }
+        .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1.5px solid var(--border); box-shadow: 2px 2px 0 var(--px); background: var(--card); color: var(--muted); font-family: 'Press Start 2P', monospace; font-size: 6px; cursor: pointer; transition: transform .08s, box-shadow .08s; white-space: nowrap; }
+        .chip:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--px); }
+        .chip.active-easy   { border-color: var(--easy);   background: rgba(86,204,86,.12);  color: var(--easy); }
+        .chip.active-medium { border-color: var(--medium); background: rgba(91,200,245,.12); color: var(--medium); }
+        .chip.active-hard   { border-color: var(--hard);   background: rgba(255,140,66,.12); color: var(--hard); }
+        .chip.active-epic   { border-color: var(--epic);   background: rgba(255,51,85,.12);  color: var(--epic); }
+        .chip.active-gold   { border-color: var(--gold);   background: rgba(242,183,5,.12);  color: var(--gold); }
+        .filter-clear { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 0; }
+        .prog-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+        .prog-circle { width: 30px; height: 30px; border: 2px solid var(--px); display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', monospace; font-size: 8px; flex-shrink: 0; }
+        .prog-circle.done { background: var(--gold); color: #232C41; }
+        .prog-circle.todo { background: var(--card); color: var(--muted); }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const DIFF = {
+    easy:   { label: 'Easy',   icon: '⚡', xp: 50  },
+    medium: { label: 'Medium', icon: '⚔️', xp: 150 },
+    hard:   { label: 'Hard',   icon: '🔥', xp: 300 },
+    epic:   { label: 'Epic',   icon: '💀', xp: 600 }
+};
+const TIMELINES = [
+    { id: 'today',    label: 'Today',      icon: '🌅' },
+    { id: 'week',     label: 'This Week',  icon: '📆' },
+    { id: 'month',    label: 'This Month', icon: '🗓️' },
+    { id: 'longterm', label: 'Long Term',  icon: '🏔️' },
+    { id: 'whenever', label: 'Whenever',   icon: '🌊' }
+];
+const CATS = [
+    { id: 'work',     label: 'Work',     icon: '💼' },
+    { id: 'personal', label: 'Personal', icon: '🏠' },
+    { id: 'health',   label: 'Health',   icon: '💪' },
+    { id: 'learning', label: 'Learning', icon: '📚' },
+    { id: 'social',   label: 'Social',   icon: '👥' },
+    { id: 'other',    label: 'Other',    icon: '✨' }
+];
+const TITLES = [
+    { min: 1,  name: 'Novice'     },
+    { min: 3,  name: 'Apprentice' },
+    { min: 5,  name: 'Adventurer' },
+    { min: 8,  name: 'Journeyman' },
+    { min: 12, name: 'Veteran'    },
+    { min: 16, name: 'Champion'   },
+    { min: 20, name: 'Hero'       },
+    { min: 25, name: 'Master'     },
+    { min: 30, name: 'Legendary'  }
+];
+function classTitle(level) { let t = TITLES[0].name; for (const r of TITLES) { if (level >= r.min) t = r.name; else break; } return t; }
+function xpNeeded(level) { return level * 200; }
+function loadState() { try { const s = localStorage.getItem('ql_v1'); if (s) return JSON.parse(s); } catch(e) {} return null; }
+function save() { try { localStorage.setItem('ql_v1', JSON.stringify(S)); } catch(e) {} }
+
+let S = loadState() || { setup: false, char: { name: '', level: 1, xp: 0, totalXp: 0, done: 0 }, quests: [], tab: 'quests' };
+let prevTab = 'quests';
+let modal   = { open: false, diff: 'medium', cat: 'personal', timeline: 'whenever' };
+let filters = { open: false, diff: [], timeline: [], cat: [] };
+let levelup = { open: false, level: 1 };
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function h(str) { return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fdate(ts) { return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+
+function timelineCountdown(timeline) {
+    const now = new Date(); now.setHours(0,0,0,0);
+    let end;
+    if (timeline === 'today') { end = new Date(now); }
+    else if (timeline === 'week') { end = new Date(now); const d = now.getDay() === 0 ? 0 : 7 - now.getDay(); end.setDate(now.getDate() + d); }
+    else if (timeline === 'month') { end = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+    else { return null; }
+    const days = Math.round((end - now) / 86400000);
+    if (days === 0) return { text: 'Ends today', cls: 'overdue' };
+    if (days === 1) return { text: '1 day left', cls: 'soon' };
+    return { text: `${days} days left`, cls: '' };
+}
+function dueMeta(dateStr) {
+    const due = new Date(dateStr + 'T00:00:00');
+    const now = new Date(); now.setHours(0,0,0,0);
+    const d = Math.round((due - now) / 86400000);
+    if (d < 0) return { cls: 'overdue', text: `⚠️ ${Math.abs(d)}d overdue` };
+    if (d === 0) return { cls: 'soon', text: '📅 Due today' };
+    if (d === 1) return { cls: 'soon', text: '📅 Due tomorrow' };
+    return { cls: '', text: `📅 ${d}d left` };
+}
+
+function render() { document.getElementById('app').innerHTML = S.setup ? renderApp() : renderSetup(); }
+
+function renderSetup() {
+    return `<div class="setup">
+        <div class="setup-logo">⚔️</div>
+        <h1 class="setup-h1">Quest Log</h1>
+        <p class="setup-sub">Track your goals like an adventurer.<br>Earn XP. Level up. Conquer your day.</p>
+        <div style="width:100%">
+            <div class="setup-label">Your Adventurer Name</div>
+            <input id="sname" class="finput" type="text" placeholder="Enter your name…" maxlength="24" style="width:100%;margin-bottom:12px">
+            <button class="btn btn-gold btn-full" data-action="setup-go">⚔️ Begin Adventure</button>
+        </div>
+    </div>`;
+}
+
+function renderApp() {
+    const c = S.char;
+    const pct = Math.min(100, (c.xp / xpNeeded(c.level)) * 100);
+    return `<div id="inner">
+        <div class="header">
+            <div class="char-row">
+                <div class="char-avatar">⚔️</div>
+                <div class="char-info">
+                    <div class="char-name">${h(c.name)}</div>
+                    <div class="char-class">${classTitle(c.level)}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                    <div class="level-badge">LV ${c.level}</div>
+                    <div class="xp-hint">${c.xp} / ${xpNeeded(c.level)} XP</div>
+                </div>
+            </div>
+            <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
+        </div>
+        ${S.tab === 'quests' ? renderFilterBar() : ''}
+        <div class="content">${renderTabContent()}</div>
+        ${S.tab === 'quests' ? '<button class="fab" data-action="open-modal">+</button>' : ''}
+        <div class="tab-bar">
+            <button class="tab-btn ${S.tab==='quests'    ?'active':''}" data-tab="quests"><span class="ti">⚔️</span>Quests</button>
+            <button class="tab-btn ${S.tab==='completed' ?'active':''}" data-tab="completed"><span class="ti">✅</span>Completed</button>
+            <button class="tab-btn ${S.tab==='character' ?'active':''}" data-tab="character"><span class="ti">🧙</span>Character</button>
+        </div>
+        ${renderSheet()}${renderLevelUp()}
+    </div>`;
+}
+
+function renderTabContent() {
+    if (S.tab === 'quests')    return renderQuests();
+    if (S.tab === 'completed') return renderCompleted();
+    if (S.tab === 'character') return renderCharacter();
+    return '';
+}
+
+function renderFilterBar() {
+    const anyActive = filters.diff.length || filters.timeline.length || filters.cat.length;
+    return `<div class="filter-bar">
+        <button class="filter-toggle" data-action="toggle-filters">
+            <span>🔍 Filter Quests</span>
+            <span class="ft-right">
+                ${anyActive ? '<button class="filter-clear" data-action="clear-filters">Clear</button>' : ''}
+                <span class="filter-dot ${anyActive ? 'visible' : ''}"></span>
+                <span class="filter-chevron ${filters.open ? 'open' : ''}">▼</span>
+            </span>
+        </button>
+        ${filters.open ? `<div class="filter-rows">
+            <div><div class="filter-row-label">Difficulty</div><div class="chip-row">
+                ${Object.entries(DIFF).map(([k,d]) => `<span class="chip ${filters.diff.includes(k)?'active-'+k:''}" data-filter-diff="${k}">${d.icon} ${d.label}</span>`).join('')}
+            </div></div>
+            <div><div class="filter-row-label">Timeline</div><div class="chip-row">
+                ${TIMELINES.map(t => `<span class="chip ${filters.timeline.includes(t.id)?'active-gold':''}" data-filter-timeline="${t.id}">${t.icon} ${t.label}</span>`).join('')}
+            </div></div>
+            <div><div class="filter-row-label">Category</div><div class="chip-row">
+                ${CATS.map(c => `<span class="chip ${filters.cat.includes(c.id)?'active-gold':''}" data-filter-cat="${c.id}">${c.icon} ${c.label}</span>`).join('')}
+            </div></div>
+        </div>` : ''}
+    </div>`;
+}
+
+function renderQuests() {
+    const active = S.quests.filter(q => q.status === 'active');
+    const order = { epic:0, hard:1, medium:2, easy:3 };
+    let filtered = [...active].sort((a,b) => order[a.difficulty] - order[b.difficulty]);
+    if (filters.diff.length)     filtered = filtered.filter(q => filters.diff.includes(q.difficulty));
+    if (filters.timeline.length) filtered = filtered.filter(q => filters.timeline.includes(q.timeline));
+    if (filters.cat.length)      filtered = filtered.filter(q => filters.cat.includes(q.category));
+    const anyFilter = filters.diff.length || filters.timeline.length || filters.cat.length;
+    if (!active.length) return `<div class="empty"><div class="empty-icon">📜</div><h3>No Active Quests</h3><p>Tap + to add your first quest!</p></div>`;
+    if (!filtered.length) return `<div class="empty"><div class="empty-icon">🔍</div><h3>No Matches</h3><p>No quests match the current filters.</p></div>`;
+    return `<div class="sec-header"><span class="sec-title">Active Quests</span><span class="sec-badge">${anyFilter ? `${filtered.length} / ${active.length}` : active.length}</span></div>
+    ${filtered.map(q => renderCard(q, false)).join('')}`;
+}
+
+function renderCompleted() {
+    const done = S.quests.filter(q => q.status === 'completed').sort((a,b) => b.completedAt - a.completedAt);
+    if (!done.length) return `<div class="empty"><div class="empty-icon">🏆</div><h3>No Completed Quests</h3><p>Finish a quest to see it here!</p></div>`;
+    const totalXp = done.reduce((s, q) => s + DIFF[q.difficulty].xp, 0);
+    return `<div class="sec-header"><span class="sec-title">Completed</span><span class="sec-badge">${done.length}</span></div>
+    <div class="stat-card" style="margin-bottom:14px;background:rgba(242,183,5,.07);border-color:rgba(242,183,5,.2)">
+        <div style="font-size:15px;font-weight:700;color:var(--gold)">⚡ ${totalXp.toLocaleString()} total XP earned</div>
+    </div>
+    ${done.map(q => renderCard(q, true)).join('')}`;
+}
+
+function renderCharacter() {
+    const c = S.char;
+    const pct = Math.min(100, (c.xp / xpNeeded(c.level)) * 100);
+    const next = TITLES.find(t => t.min > c.level);
+    const active = S.quests.filter(q => q.status === 'active').length;
+    return `<div>
+        <button class="btn btn-ghost" data-action="go-back" style="margin-bottom:16px;padding:8px 14px">‹ Back</button>
+        <div style="text-align:center;padding:22px 0 18px">
+            <div style="font-size:62px;margin-bottom:8px">🧙</div>
+            <div style="font-size:23px;font-weight:900;color:var(--gold)">${h(c.name)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">${classTitle(c.level)} · Level ${c.level}</div>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card"><div class="stat-val">${c.level}</div><div class="stat-lbl">Level</div></div>
+            <div class="stat-card"><div class="stat-val">${c.done || 0}</div><div class="stat-lbl">Quests Done</div></div>
+            <div class="stat-card"><div class="stat-val">${(c.totalXp||0).toLocaleString()}</div><div class="stat-lbl">Total XP</div></div>
+            <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-lbl">Active</div></div>
+        </div>
+        <div class="stat-card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-size:11px;color:var(--muted)">Progress to Level ${c.level+1}</span>
+                <span style="font-size:12px;color:var(--gold)">${c.xp} / ${xpNeeded(c.level)} XP</span>
+            </div>
+            <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
+            ${next ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Next title: <span style="color:var(--gold)">${next.name}</span> at Level ${next.min}</div>` : ''}
+        </div>
+        <div class="sec-title" style="margin-bottom:10px">Class Progression</div>
+        ${TITLES.map(t => `<div class="prog-row">
+            <div class="prog-circle ${c.level >= t.min ? 'done' : 'todo'}">${t.min}</div>
+            <div>
+                <div style="font-size:14px;font-weight:${c.level>=t.min?700:400};color:${c.level>=t.min?'var(--gold)':'var(--muted)'}">${t.name}</div>
+                <div style="font-size:11px;color:var(--muted)">Level ${t.min}+</div>
+            </div>
+            ${c.level >= t.min ? '<span style="margin-left:auto;color:var(--gold)">✓</span>' : ''}
+        </div>`).join('')}
+        <div style="margin-top:22px;display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-ghost btn-full" data-action="rename">✏️ Rename Character</button>
+            <button class="btn btn-ghost btn-full" data-action="export">📤 Export Quests</button>
+            <label class="btn btn-ghost btn-full" style="cursor:pointer;justify-content:center">
+                📥 Import Quests
+                <input type="file" accept=".json" id="import-file" style="display:none">
+            </label>
+            <button class="btn btn-danger btn-full" style="justify-content:center" data-action="reset">⚠️ Reset All Data</button>
+        </div>
+    </div>`;
+}
+
+function renderCard(q, done) {
+    const d = DIFF[q.difficulty];
+    const cat = CATS.find(c => c.id === q.category) || CATS[5];
+    let dueHtml = '';
+    if (q.dueDate && !done) { const m = dueMeta(q.dueDate); dueHtml = `<span class="qmeta-item ${m.cls}">${m.text}</span>`; }
+    const compHtml = done && q.completedAt ? `<span class="qmeta-item">✅ ${fdate(q.completedAt)}</span>` : '';
+    return `<div class="qcard ${q.difficulty} ${done?'completed':''}" data-id="${q.id}">
+        <div class="qcard-top">
+            <span class="qtitle">${h(q.title)}</span>
+            <span class="dbadge ${q.difficulty}">${d.icon} ${d.label}</span>
+        </div>
+        <div class="qmeta">
+            <span class="qmeta-item">${cat.icon} ${cat.label}</span>
+            ${(() => {
+                if (!q.timeline) return '';
+                const tl = TIMELINES.find(t => t.id === q.timeline);
+                if (!tl) return '';
+                const cd = !done ? timelineCountdown(q.timeline) : null;
+                return `<span class="qmeta-item">${tl.icon} ${tl.label}</span>` + (cd ? `<span class="qmeta-item ${cd.cls}">⏳ ${cd.text}</span>` : '');
+            })()}
+            ${dueHtml}${compHtml}
+            <span class="xpreward">+${d.xp} XP</span>
+        </div>
+        ${q.description ? `<p class="qdesc">${h(q.description)}</p>` : ''}
+        <div class="qactions">
+            ${!done
+                ? `<button class="btn btn-gold" data-complete="${q.id}">⚡ Complete</button><button class="btn btn-danger" data-delete="${q.id}">🗑</button>`
+                : `<button class="btn btn-danger" data-delete="${q.id}" style="flex:1;justify-content:center">🗑 Remove</button>`}
+        </div>
+    </div>`;
+}
+
+function renderSheet() {
+    return `<div class="sheet-overlay ${modal.open?'open':''}" data-action="close-sheet-bg">
+        <div class="sheet" id="sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">📜 New Quest</div>
+            <div class="fgroup"><label class="flabel">Quest Title *</label><input id="q-title" class="finput" type="text" placeholder="What must be done?" maxlength="80"></div>
+            <div class="fgroup"><label class="flabel">Description (optional)</label><textarea id="q-desc" class="ftextarea" placeholder="More details…"></textarea></div>
+            <div class="fgroup">
+                <label class="flabel">Difficulty & XP Reward</label>
+                <div class="diff-grid">
+                    ${Object.entries(DIFF).map(([k,d]) => `<div class="diff-opt ${k} ${modal.diff===k?'sel':''}" data-diff="${k}"><span class="di">${d.icon}</span><span class="dn">${d.label}</span><span class="dx">${d.xp} XP</span></div>`).join('')}
+                </div>
+            </div>
+            <div class="fgroup">
+                <label class="flabel">Category</label>
+                <div class="cat-grid">
+                    ${CATS.map(c => `<div class="cat-opt ${modal.cat===c.id?'sel':''}" data-cat="${c.id}"><span class="ci">${c.icon}</span>${c.label}</div>`).join('')}
+                </div>
+            </div>
+            <div class="fgroup">
+                <label class="flabel">Timeline</label>
+                <div class="cat-grid" style="grid-template-columns:repeat(5,1fr)">
+                    ${TIMELINES.map(t => `<div class="cat-opt ${modal.timeline===t.id?'sel':''}" data-timeline="${t.id}"><span class="ci">${t.icon}</span>${t.label}</div>`).join('')}
+                </div>
+            </div>
+            <div class="fgroup"><label class="flabel">Due Date (optional)</label><input id="q-due" class="finput" type="date"></div>
+            <button class="btn btn-gold btn-full" data-action="submit-quest">⚔️ Accept Quest</button>
+        </div>
+    </div>`;
+}
+
+function renderLevelUp() {
+    return `<div class="lu-overlay ${levelup.open?'open':''}" id="lu-overlay">
+        <div class="lu-card">
+            <div class="lu-emoji">🎉</div>
+            <div class="lu-tag">Level Up!</div>
+            <div class="lu-num">${levelup.level}</div>
+            <div class="lu-class">${classTitle(levelup.level)}</div>
+            <button class="btn btn-gold btn-full" data-action="close-levelup">⚔️ Continue</button>
+        </div>
+    </div>`;
+}
+
+function completeQuest(id, el) {
+    const q = S.quests.find(x => x.id === id);
+    if (!q || q.status === 'completed') return;
+    q.status = 'completed';
+    q.completedAt = Date.now();
+    const xp = DIFF[q.difficulty].xp;
+    const c = S.char;
+    c.xp += xp;
+    c.totalXp = (c.totalXp || 0) + xp;
+    c.done = (c.done || 0) + 1;
+    if (el) {
+        const r = el.getBoundingClientRect();
+        const fl = document.createElement('div');
+        fl.className = 'xp-float';
+        fl.textContent = `+${xp} XP`;
+        fl.style.left = (r.left + r.width / 2) + 'px';
+        fl.style.top  = r.top + 'px';
+        document.body.appendChild(fl);
+        setTimeout(() => fl.remove(), 1500);
+    }
+    let didLevel = false;
+    while (c.xp >= xpNeeded(c.level)) { c.xp -= xpNeeded(c.level); c.level++; didLevel = true; }
+    save();
+    if (didLevel) { levelup.level = c.level; setTimeout(() => { levelup.open = true; render(); }, 700); }
+    else { render(); }
+}
+
+function submitQuest() {
+    const titleEl = document.getElementById('q-title');
+    const title = titleEl?.value.trim();
+    if (!title) { titleEl?.classList.add('error'); titleEl?.focus(); return; }
+    S.quests.push({ id: uid(), title, description: document.getElementById('q-desc')?.value.trim() || '', difficulty: modal.diff, category: modal.cat, timeline: modal.timeline, dueDate: document.getElementById('q-due')?.value || null, createdAt: Date.now(), status: 'active', completedAt: null });
+    modal.open = false; S.tab = 'quests'; save(); render();
+}
+
+document.addEventListener('click', e => {
+    if (e.target.closest('[data-action="setup-go"]')) { const name = document.getElementById('sname')?.value.trim() || 'Adventurer'; S.char.name = name.slice(0,24); S.setup = true; save(); render(); return; }
+    const tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn) { prevTab = S.tab; S.tab = tabBtn.dataset.tab; save(); render(); return; }
+    if (e.target.closest('[data-action="go-back"]')) { S.tab = prevTab === 'character' ? 'quests' : prevTab; save(); render(); return; }
+    if (e.target.closest('[data-action="open-modal"]')) { modal.open = true; modal.diff = 'medium'; modal.cat = 'personal'; modal.timeline = 'whenever'; render(); setTimeout(() => document.getElementById('q-title')?.focus(), 330); return; }
+    if (e.target.closest('[data-action="toggle-filters"]') && !e.target.closest('[data-action="clear-filters"]')) { filters.open = !filters.open; render(); return; }
+    if (e.target.closest('[data-action="clear-filters"]')) { filters.diff = []; filters.timeline = []; filters.cat = []; render(); return; }
+    const fd = e.target.closest('[data-filter-diff]');
+    if (fd) { const v = fd.dataset.filterDiff; filters.diff = filters.diff.includes(v) ? filters.diff.filter(x => x !== v) : [...filters.diff, v]; render(); return; }
+    const ft = e.target.closest('[data-filter-timeline]');
+    if (ft) { const v = ft.dataset.filterTimeline; filters.timeline = filters.timeline.includes(v) ? filters.timeline.filter(x => x !== v) : [...filters.timeline, v]; render(); return; }
+    const fc = e.target.closest('[data-filter-cat]');
+    if (fc) { const v = fc.dataset.filterCat; filters.cat = filters.cat.includes(v) ? filters.cat.filter(x => x !== v) : [...filters.cat, v]; render(); return; }
+    if (e.target.matches('[data-action="close-sheet-bg"]')) { modal.open = false; render(); return; }
+    const diffEl = e.target.closest('[data-diff]');
+    if (diffEl) { modal.diff = diffEl.dataset.diff; document.querySelectorAll('[data-diff]').forEach(el => { el.className = `diff-opt ${el.dataset.diff}`; }); diffEl.classList.add('sel'); return; }
+    const catEl = e.target.closest('[data-cat]');
+    if (catEl) { modal.cat = catEl.dataset.cat; document.querySelectorAll('[data-cat]').forEach(el => el.classList.remove('sel')); catEl.classList.add('sel'); return; }
+    const tlEl = e.target.closest('[data-timeline]');
+    if (tlEl) { modal.timeline = tlEl.dataset.timeline; document.querySelectorAll('[data-timeline]').forEach(el => el.classList.remove('sel')); tlEl.classList.add('sel'); return; }
+    if (e.target.closest('[data-action="submit-quest"]')) { submitQuest(); return; }
+    const completeBtn = e.target.closest('[data-complete]');
+    if (completeBtn) { completeQuest(completeBtn.dataset.complete, completeBtn); return; }
+    const deleteBtn = e.target.closest('[data-delete]');
+    if (deleteBtn) {
+        if (confirm('Remove this quest from the log?')) {
+            const q = S.quests.find(q => q.id === deleteBtn.dataset.delete);
+            if (q?.status === 'completed') {
+                const xp = DIFF[q.difficulty].xp; const c = S.char;
+                c.totalXp = Math.max(0, (c.totalXp || 0) - xp);
+                c.xp -= xp;
+                while (c.xp < 0 && c.level > 1) { c.level--; c.xp += xpNeeded(c.level); }
+                c.xp = Math.max(0, c.xp);
+                c.done = Math.max(0, (c.done || 0) - 1);
+            }
+            S.quests = S.quests.filter(q => q.id !== deleteBtn.dataset.delete);
+            save(); render();
+        }
+        return;
+    }
+    if (e.target.closest('[data-action="close-levelup"]')) { levelup.open = false; render(); return; }
+    if (e.target.closest('[data-action="rename"]')) { const n = prompt('New name:', S.char.name); if (n?.trim()) { S.char.name = n.trim().slice(0,24); save(); render(); } return; }
+    if (e.target.closest('[data-action="export"]')) {
+        const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `quest-log-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); return;
+    }
+    if (e.target.closest('[data-action="reset"]')) {
+        if (confirm('Reset ALL data? This cannot be undone!')) { localStorage.removeItem('ql_v1'); S = { setup: false, char: { name:'', level:1, xp:0, totalXp:0, done:0 }, quests:[], tab:'quests' }; render(); }
+        return;
+    }
+});
+
+document.addEventListener('change', e => {
+    const input = e.target.closest('#import-file');
+    if (!input || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (!data.char || !Array.isArray(data.quests)) throw new Error();
+            if (!confirm(`Import backup from ${input.files[0].name}?\nThis will replace your current data.`)) return;
+            S = data; save(); render();
+        } catch { alert('Invalid backup file — import cancelled.'); }
+    };
+    reader.readAsText(input.files[0]);
+});
+
+document.addEventListener('keydown', e => { if (!S.setup && e.key === 'Enter') document.querySelector('[data-action="setup-go"]')?.click(); });
+
+render();
+</script>
+</body>
 </html>
