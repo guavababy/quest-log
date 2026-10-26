@@ -1,0 +1,76 @@
+# Copy this file to config.toml and fill it in.
+
+party_size = 2
+timezone = "America/New_York"   # restaurants' local time (release times use this)
+
+[account]
+email = "you@example.com"        # your Resy login. Password: RESY_PASSWORD env var, or typed at start.
+
+# ---------------------------------------------------------------------------
+# When you want to eat. Dates are tried in the order listed: specific dates first,
+# then every date from start to end that falls on one of the weekdays.
+[when]
+dates = ["2026-11-14", "2026-11-21"]
+# start = "2026-11-01"
+# end = "2026-11-30"
+# weekdays = ["fri", "sat"]
+earliest = "18:00"
+latest = "21:30"
+preferred = "19:30"              # among slots that fit, pick the one closest to this
+
+# ---------------------------------------------------------------------------
+# Restaurants, best first. The bot always books the highest one on this list
+# that has a table.
+#
+#   venue    the restaurant's resy.com URL, its slug, or its venue id
+#            (find it with:  python resybot.py search "restaurant name")
+#   city     the city part of the URL (resy.com/cities/<city>/...), default "ny"
+#
+# Optional:
+#   release_days_ahead / release_time   when new tables open, e.g. "30 days ahead at
+#            10:00". Copy it from the restaurant's Resy page if it's listed there. With it, the
+#            bot waits until just before that moment and then checks every few
+#            seconds. Without it, the bot simply checks at the normal pace.
+#   seating  only these table types, best first, e.g. ["Dining Room", "Bar"]
+#   earliest / latest / preferred   override the [when] times for this restaurant
+
+[[restaurants]]
+name = "Example A"
+venue = "https://resy.com/cities/ny/example-a"
+release_days_ahead = 30
+release_time = "10:00"
+
+[[restaurants]]
+name = "Example B"
+venue = "example-b"
+city = "ny"
+seating = ["Dining Room"]
+
+# ---------------------------------------------------------------------------
+[bot]
+dry_run = true              # true: only report what it WOULD book. Set false to book for real.
+stop_after_first = true     # false: keep looking after a booking (one table per date at most)
+check_every_seconds = 120   # normal pace (randomized +/-25%)
+release_lead_seconds = 30   # start fast checks this long before a release time...
+release_window_minutes = 3  # ...and keep them up this long after it
+fast_check_seconds = 2      # pace during that window
+
+# ---------------------------------------------------------------------------
+# Alerts when it books (or stops because of a problem).
+# method = "twilio" (text message), "email", "ntfy" (free phone push), or "none"
+[alerts]
+method = "twilio"
+phone = "+15551234567"                # your mobile number
+twilio_account_sid = "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+twilio_from = "+15557654321"          # your Twilio number
+# twilio_auth_token = "..."           # or set the TWILIO_AUTH_TOKEN env var
+
+# Email instead (Gmail needs an app password):
+# method = "email"
+# smtp_user = "you@gmail.com"
+# email_to = "you@gmail.com"
+# smtp_password = "..."               # or set the SMTP_PASSWORD env var
+
+# Phone push instead (install the ntfy app and subscribe to the same topic):
+# method = "ntfy"
+# ntfy_topic = "pick-a-long-random-topic-name"
